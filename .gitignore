@@ -1,4 +1,8 @@
 *.class
+*.properties
+
+nbproject
+dist
 
 # Mobile Tools for Java (J2ME)
 .mtj.tmp/
