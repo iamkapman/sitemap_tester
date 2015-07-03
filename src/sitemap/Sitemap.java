@@ -11,6 +11,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.StringReader;
 import java.math.MathContext;
 import java.net.Socket;
 import java.net.URL;
@@ -18,6 +19,7 @@ import java.net.URLConnection;
 import org.jdom2.*;
 import org.jdom2.input.*;
 import java.util.List;
+import java.util.Scanner;
 
 /**
  *
@@ -33,8 +35,40 @@ public class Sitemap {
         //Sitemap smClass = new Sitemap();
         SAXBuilder builder = new SAXBuilder();
 
+        String pars = "";
+        if (args.length == 0) {
+
+            Scanner in = new Scanner(System.in);
+            String domain = "";
+            while (!domain.matches("^[a-z0-9-\\.]{2,}\\.[a-z]{2,}$")) {
+                System.out.println("Please, enter domain (yandex.ru):");
+                domain = in.nextLine();
+            }
+
+            System.out.println("Download: http://" + domain + "/sitemap.xml");
+            URL url = new URL("http://" + domain + "/sitemap.xml");
+
+            URLConnection urlConnection = url.openConnection();
+            try {
+                InputStream input = urlConnection.getInputStream();
+
+                int data = input.read();
+                while(data != -1){
+                    //System.out.print((char) data);
+                    pars += (char)data;
+                    data = input.read();
+                }
+                input.close();
+            }
+            catch (Exception ex) {
+                System.err.println(ex.getMessage());
+            }
+        }
+
+        System.out.println("Parsing...");
+        //System.out.println(pars);
         try {
-            Document xmlDoc = builder.build(args[0]);
+            Document xmlDoc = pars.length() == 0 ? builder.build(args[0]) : builder.build(new StringReader(pars));
             //System.out.println(xmlDoc.getRootElement().getName());
             List<Element> temp = xmlDoc.getRootElement().getChildren();
             String[] urlList = new String[temp.size()];
@@ -188,6 +222,8 @@ public class Sitemap {
                     .replace("?", "\\?")
                     .trim().split("\n");
 
+            System.out.println("Robots.txt: " + robots.length + " line(s)");
+
             for (int i = 0; i < testList.length; i++) {
                 for (int z = 0; z < robots.length; z++) {
                     if (testList[i].matches(robots[z])) {
@@ -196,6 +232,8 @@ public class Sitemap {
                     //System.out.println(testList[i] + " <> " + robots[z]);
                 }
             }
+
+            System.out.println("Disallow rules: " + disallow.length);
         }
         catch (IOException e) {
             throw new Exception("Ошибка при отправке запроса: " + e.getMessage(), e);
