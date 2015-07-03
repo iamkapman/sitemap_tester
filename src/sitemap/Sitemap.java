@@ -9,8 +9,12 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.math.MathContext;
 import java.net.Socket;
+import java.net.URL;
+import java.net.URLConnection;
 import org.jdom2.*;
 import org.jdom2.input.*;
 import java.util.List;
@@ -26,7 +30,7 @@ public class Sitemap {
         System.out.println("Sitemap Tester v. 0.1b");
         System.out.println("Author: Alexandr Evlanov\n");
 
-        Sitemap smClass = new Sitemap();
+        //Sitemap smClass = new Sitemap();
         SAXBuilder builder = new SAXBuilder();
 
         try {
@@ -63,6 +67,7 @@ public class Sitemap {
         Socket socket = null;
         String res = null;
         String[] restofile = new String[urlList.length];
+        String[] disallow = testRobots(host, urlList);
 
         try {
             for (int i = 0; i < urlList.length; i++) {
@@ -94,6 +99,14 @@ public class Sitemap {
                     restofile[i] = urlList[i] + " > " + res.split("\\r\\n")[0];
                     System.out.println(restofile[i]);
                 }
+                else {
+                    for (int j = 0; j < disallow.length; j++) {
+                        if(urlList[i].equals(disallow[j])) {
+                            restofile[i] = urlList[i] + " > robots.txt";
+                            System.out.println(restofile[i]);
+                        }
+                    }
+                }
 
                 socket.close();
             }
@@ -122,8 +135,8 @@ public class Sitemap {
      * Сохраняет список адресов в файл
      * @param list
      */
-    public static void save(String[] list) {
-
+    public static void save(String[] list)
+    {
         System.out.println("Save result...");
 
         FileWriter writeFile = null;
@@ -148,5 +161,46 @@ public class Sitemap {
                 }
             }
         }
+    }
+
+    public static String[] testRobots(String domain, String[] testList) throws Exception
+    {
+        URL url = new URL("http://" + domain + "/robots.txt");
+
+        String[] disallow = new String[testList.length];
+
+        URLConnection urlConnection = url.openConnection();
+        try {
+            InputStream input = urlConnection.getInputStream();
+
+            String pars = "";
+            int data = input.read();
+            while(data != -1){
+                //System.out.print((char) data);
+                pars += (char)data;
+                data = input.read();
+            }
+            input.close();
+
+            String[] robots = pars.replaceAll("(User-agent|Clean-param|Host|Sitemap): .*", "")
+                    .replace("Disallow: ", "")
+                    .replace("*", ".*")
+                    .replace("?", "\\?")
+                    .trim().split("\n");
+
+            for (int i = 0; i < testList.length; i++) {
+                for (int z = 0; z < robots.length; z++) {
+                    if (testList[i].matches(robots[z])) {
+                        disallow[i] = testList[i];
+                    }
+                    //System.out.println(testList[i] + " <> " + robots[z]);
+                }
+            }
+        }
+        catch (IOException e) {
+            throw new Exception("Ошибка при отправке запроса: " + e.getMessage(), e);
+        }
+
+        return disallow;
     }
 }
